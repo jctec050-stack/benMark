@@ -2911,6 +2911,58 @@ if (window.location.pathname.includes('egresosCaja.html')) {
     }
 }
 
+// Detectar si estamos en la página de ingresos y establecer fecha automática
+if (window.location.pathname.includes('index.html') || window.location.pathname.endsWith('/pages/')) {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () {
+            const fechaMovimiento = document.getElementById('fechaMovimiento');
+            if (fechaMovimiento) {
+                fechaMovimiento.value = obtenerFechaHoraLocalISO();
+            }
+        });
+    } else {
+        const fechaMovimiento = document.getElementById('fechaMovimiento');
+        if (fechaMovimiento) {
+            fechaMovimiento.value = obtenerFechaHoraLocalISO();
+        }
+    }
+}
+
+// Detectar si estamos en la página de operaciones y establecer fecha automática
+if (window.location.pathname.includes('operaciones.html')) {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () {
+            const fechaGasto = document.getElementById('fechaGasto');
+            if (fechaGasto) {
+                fechaGasto.value = obtenerFechaHoraLocalISO();
+            }
+        });
+    } else {
+        const fechaGasto = document.getElementById('fechaGasto');
+        if (fechaGasto) {
+            fechaGasto.value = obtenerFechaHoraLocalISO();
+        }
+    }
+}
+
+// Detectar si estamos en la página de arqueo y establecer fecha automática
+if (window.location.pathname.includes('arqueo.html')) {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () {
+            const fecha = document.getElementById('fecha');
+            if (fecha) {
+                fecha.value = obtenerFechaHoraLocalISO();
+            }
+        });
+    } else {
+        const fecha = document.getElementById('fecha');
+        if (fecha) {
+            fecha.value = obtenerFechaHoraLocalISO();
+        }
+    }
+}
+
+
 
 const style = document.createElement('style');
 style.textContent = `
