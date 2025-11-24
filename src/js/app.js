@@ -855,7 +855,7 @@ function renderizarVistaArqueoFinal(totales) {
     );
 
     const totalEgresosCaja = egresosDeCajaFiltrados.reduce((sum, e) => sum + e.monto, 0) +
-                             egresosDeOperacionesFiltrados.reduce((sum, m) => sum + m.monto, 0);
+        egresosDeOperacionesFiltrados.reduce((sum, m) => sum + m.monto, 0);
     // --- FIN DE LA CORRECCIÓN ---
 
     const totalNeto = totalIngresosArqueo - totalEgresosCaja;
@@ -937,8 +937,8 @@ function actualizarArqueoFinal() {
     let egresosDeOperaciones = estado.movimientos.filter(m => {
         // Solo considerar 'gasto' y 'egreso' (pago a proveedor) que tengan una caja asignada
         return m.fecha.split('T')[0] === fechaArqueo &&
-               (m.tipo === 'gasto' || m.tipo === 'egreso') &&
-               m.caja; // Asegurarse de que el movimiento esté asociado a una caja
+            (m.tipo === 'gasto' || m.tipo === 'egreso') &&
+            m.caja; // Asegurarse de que el movimiento esté asociado a una caja
     });
 
     // Combinar ambos tipos de egresos
@@ -2415,7 +2415,7 @@ function exportarArqueoPDF(arqueo, esTemporal = false) {
     }
 
     const totalIngresosArqueo = totalEfectivoBruto + (arqueo.pagosTarjeta || 0) + (arqueo.ventasCredito || 0) + (arqueo.pedidosYa || 0) + (arqueo.ventasTransferencia || 0) + totalServiciosArqueo;
-    
+
     const egresosDeCajaFiltrados = estado.egresosCaja.filter(e => e.fecha.startsWith(arqueo.fecha.split('T')[0]) && e.caja === arqueo.caja);
     const egresosDeOperacionesFiltrados = estado.movimientos.filter(m => m.fecha.startsWith(arqueo.fecha.split('T')[0]) && (m.tipo === 'gasto' || m.tipo === 'egreso') && m.caja === arqueo.caja);
     const totalEgresosCaja = egresosDeCajaFiltrados.reduce((sum, e) => sum + e.monto, 0) + egresosDeOperacionesFiltrados.reduce((sum, m) => sum + m.monto, 0);
@@ -2466,6 +2466,199 @@ function eliminarUsuario(username) {
         renderizarListaUsuarios();
     }
 }
+
+// ============================================
+// GESTIÓN DE USUARIOS
+// ============================================
+
+/**
+ * Inicializa la gestión de usuarios en la página usuarios.html
+ */
+function inicializarGestionUsuarios() {
+    // Validar que solo administradores puedan acceder
+    validarAccesoAdmin();
+
+    // Configurar el event listener para el formulario
+    const formularioUsuario = document.getElementById('formularioUsuario');
+    if (formularioUsuario) {
+        formularioUsuario.addEventListener('submit', agregarUsuario);
+    }
+
+    // Renderizar la lista inicial de usuarios
+    renderizarListaUsuarios();
+}
+
+/**
+ * Valida que el usuario actual sea administrador
+ * Si no lo es, muestra un mensaje y podría redirigir
+ */
+function validarAccesoAdmin() {
+    const userRole = sessionStorage.getItem('userRole');
+
+    if (userRole !== 'admin') {
+        mostrarMensaje('Acceso denegado. Solo los administradores pueden gestionar usuarios.', 'peligro');
+        // Opcional: redirigir a la página principal después de 2 segundos
+        setTimeout(() => {
+            window.location.href = 'index.html';
+        }, 2000);
+        return false;
+    }
+    return true;
+}
+
+/**
+ * Maneja el envío del formulario para agregar un nuevo usuario
+ */
+function agregarUsuario(event) {
+    event.preventDefault();
+
+    // Validar acceso de administrador
+    if (!validarAccesoAdmin()) {
+        return;
+    }
+
+    // Obtener valores del formulario
+    const username = document.getElementById('nuevoUsuarioNombre').value.trim();
+    const password = document.getElementById('nuevoUsuarioPassword').value;
+    const rol = document.getElementById('nuevoUsuarioRol').value;
+
+    // Validaciones
+    if (!username || !password || !rol) {
+        mostrarMensaje('Por favor, complete todos los campos.', 'peligro');
+        return;
+    }
+
+    if (username.length < 3) {
+        mostrarMensaje('El nombre de usuario debe tener al menos 3 caracteres.', 'peligro');
+        return;
+    }
+
+    if (password.length < 3) {
+        mostrarMensaje('La contraseña debe tener al menos 3 caracteres.', 'peligro');
+        return;
+    }
+
+    // Obtener usuarios existentes
+    let usuarios = JSON.parse(localStorage.getItem('usuarios')) || [];
+
+    // Verificar que el usuario no exista
+    const usuarioExistente = usuarios.find(u => u.username.toLowerCase() === username.toLowerCase());
+    if (usuarioExistente) {
+        mostrarMensaje('Ya existe un usuario con ese nombre.', 'peligro');
+        return;
+    }
+
+    // Crear el nuevo usuario
+    const nuevoUsuario = {
+        username: username,
+        password: password,
+        rol: rol
+    };
+
+    // Agregar al array de usuarios
+    usuarios.push(nuevoUsuario);
+
+    // Guardar en localStorage
+    localStorage.setItem('usuarios', JSON.stringify(usuarios));
+
+    // Limpiar el formulario
+    document.getElementById('formularioUsuario').reset();
+
+    // Actualizar la lista de usuarios
+    renderizarListaUsuarios();
+
+    // Mostrar mensaje de éxito
+    mostrarMensaje(`Usuario "${username}" agregado exitosamente con rol de ${rol}.`, 'exito');
+}
+
+/**
+ * Renderiza la lista de usuarios existentes
+ */
+function renderizarListaUsuarios() {
+    const listaUsuarios = document.getElementById('listaUsuarios');
+    if (!listaUsuarios) return;
+
+    // Obtener usuarios desde localStorage
+    const usuarios = JSON.parse(localStorage.getItem('usuarios')) || [];
+
+    // Obtener el usuario actual para evitar que se elimine a sí mismo
+    const usuarioActual = sessionStorage.getItem('usuarioActual');
+    const userRole = sessionStorage.getItem('userRole');
+
+    // Limpiar la lista
+    listaUsuarios.innerHTML = '';
+
+    if (usuarios.length === 0) {
+        listaUsuarios.innerHTML = '<p class="text-center" style="color: var(--color-secundario);">No hay usuarios registrados.</p>';
+        return;
+    }
+
+    // Generar HTML para cada usuario
+    usuarios.forEach(usuario => {
+        const div = document.createElement('div');
+        div.className = 'movimiento-item';
+
+        // Determinar el ícono según el rol
+        let iconoRol = '👤';
+        let nombreRol = usuario.rol;
+        if (usuario.rol === 'admin') {
+            iconoRol = '👑';
+            nombreRol = 'Administrador';
+        } else if (usuario.rol === 'cajero') {
+            iconoRol = '💰';
+            nombreRol = 'Cajero';
+        } else if (usuario.rol === 'tesoreria') {
+            iconoRol = '🏦';
+            nombreRol = 'Tesorería';
+        }
+
+        // Determinar si se puede eliminar este usuario
+        const puedeEliminar = userRole === 'admin' && usuario.username !== usuarioActual;
+
+        // Indicador si es el usuario actual
+        const esUsuarioActual = usuario.username === usuarioActual;
+        const badgeActual = esUsuarioActual ? '<span style="background-color: var(--color-exito); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; margin-left: 8px;">Sesión Activa</span>' : '';
+
+        div.innerHTML = `
+            <div class="movimiento-header">
+                <span class="movimiento-tipo">
+                    ${iconoRol} ${usuario.username.toUpperCase()}${badgeActual}
+                </span>
+                <span class="movimiento-monto" style="background-color: var(--color-info); color: white; padding: 4px 12px; border-radius: 4px;">
+                    ${nombreRol}
+                </span>
+            </div>
+            <div class="movimiento-detalles" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <small><strong>Usuario:</strong> ${usuario.username}</small><br>
+                    <small><strong>Rol:</strong> ${nombreRol}</small>
+                </div>
+                <div>
+                    ${puedeEliminar ? `<button class="btn-accion eliminar" onclick="eliminarUsuario('${usuario.username}')">Eliminar</button>` : ''}
+                    ${esUsuarioActual ? '<small style="color: var(--color-secundario);">No puedes eliminar tu propia cuenta</small>' : ''}
+                </div>
+            </div>
+        `;
+
+        listaUsuarios.appendChild(div);
+    });
+}
+
+// ============================================
+// INICIALIZACIÓN AUTOMÁTICA
+// ============================================
+
+// Detectar si estamos en la página de usuarios y ejecutar la inicialización
+if (window.location.pathname.includes('usuarios.html')) {
+    // Esperar a que el DOM esté completamente cargado
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', inicializarGestionUsuarios);
+    } else {
+        // El DOM ya está cargado
+        inicializarGestionUsuarios();
+    }
+}
+
 const style = document.createElement('style');
 style.textContent = `
     @keyframes slideIn {
