@@ -1325,6 +1325,218 @@ function limpiarFormularioGastos() {
     document.getElementById('fechaGasto').value = obtenerFechaHoraLocalISO();
 }
 
+// ============================================
+// GESTIÓN DE EGRESOS DE CAJA
+// ============================================
+
+/**
+ * Guarda un egreso de caja en localStorage
+ */
+function guardarEgresoCaja(event) {
+    event.preventDefault();
+
+    const idEditar = document.getElementById('idEgresoCajaEditar').value;
+    const esEdicion = idEditar !== '';
+
+    // Obtener datos del formulario
+    const fecha = document.getElementById('fechaEgresoCaja').value;
+    const caja = document.getElementById('cajaEgreso').value;
+    const categoria = document.getElementById('categoriaEgresoCaja').value;
+    const descripcion = document.getElementById('descripcionEgresoCaja').value;
+    const monto = parsearMoneda(document.getElementById('montoEgresoCaja').value);
+    const referencia = document.getElementById('referenciaEgresoCaja').value;
+    const cajero = sessionStorage.getItem('usuarioActual');
+
+    // Validaciones
+    if (!fecha || !caja || !categoria || !descripcion) {
+        mostrarMensaje('Por favor, complete todos los campos obligatorios.', 'peligro');
+        return;
+    }
+
+    if (monto <= 0) {
+        mostrarMensaje('Debe registrar los billetes del egreso.', 'peligro');
+        return;
+    }
+
+    // Obtener desglose de billetes
+    const efectivo = {};
+    document.querySelectorAll('#tablaDenominacionesEgresoCaja .cantidad-denominacion-egreso').forEach(input => {
+        const denominacion = input.dataset.denominacion;
+        const cantidad = parseInt(input.value) || 0;
+        if (cantidad > 0) {
+            efectivo[denominacion] = cantidad;
+        }
+    });
+
+    // Crear objeto de egreso
+    const egreso = {
+        id: esEdicion ? idEditar : generarId(),
+        fecha: fecha,
+        caja: caja,
+        cajero: cajero,
+        categoria: categoria,
+        descripcion: descripcion,
+        monto: monto,
+        referencia: referencia,
+        efectivo: efectivo
+    };
+
+    if (esEdicion) {
+        // Actualizar egreso existente
+        const index = estado.egresosCaja.findIndex(e => e.id === idEditar);
+        if (index !== -1) {
+            estado.egresosCaja[index] = egreso;
+            mostrarMensaje('Egreso actualizado con éxito.', 'exito');
+        }
+    } else {
+        // Agregar nuevo egreso
+        estado.egresosCaja.push(egreso);
+        mostrarMensaje('Egreso guardado con éxito.', 'exito');
+    }
+
+    // Guardar en localStorage
+    localStorage.setItem('egresosCaja', JSON.stringify(estado.egresosCaja));
+
+    // Limpiar formulario y actualizar historial
+    limpiarFormularioEgresoCaja();
+    cargarHistorialEgresosCaja();
+}
+
+/**
+ * Carga y muestra el historial de egresos de caja
+ */
+function cargarHistorialEgresosCaja() {
+    const listaEgresosCaja = document.getElementById('listaEgresosCaja');
+    if (!listaEgresosCaja) return;
+
+    // Obtener egresos desde localStorage
+    const egresos = JSON.parse(localStorage.getItem('egresosCaja')) || [];
+
+    // Obtener filtros
+    const fechaFiltro = document.getElementById('fechaFiltroEgresos')?.value;
+    const cajaFiltro = document.getElementById('filtroCajaEgresos')?.value;
+
+    // Filtrar egresos
+    let egresosFiltrados = egresos;
+
+    if (fechaFiltro) {
+        egresosFiltrados = egresosFiltrados.filter(e => e.fecha.startsWith(fechaFiltro));
+    }
+
+    if (cajaFiltro) {
+        egresosFiltrados = egresosFiltrados.filter(e => e.caja === cajaFiltro);
+    }
+
+    // Limpiar lista
+    listaEgresosCaja.innerHTML = '';
+
+    if (egresosFiltrados.length === 0) {
+        listaEgresosCaja.innerHTML = '<p class="text-center" style="color: var(--color-secundario);">No hay egresos registrados.</p>';
+        return;
+    }
+
+    // Renderizar egresos
+    egresosFiltrados.forEach(egreso => {
+        const div = document.createElement('div');
+        div.className = 'movimiento-item';
+
+        div.innerHTML = `
+            <div class="movimiento-header">
+                <span class="movimiento-tipo">${egreso.categoria.toUpperCase()}</span>
+                <span class="movimiento-monto negativo">${formatearMoneda(egreso.monto, 'gs')}</span>
+            </div>
+            <div class="movimiento-detalles">
+                <div>
+                    <p><strong>Descripción:</strong> ${egreso.descripcion}</p>
+                    <small>${formatearFecha(egreso.fecha)}</small><br>
+                    <small><strong>Cajero:</strong> ${egreso.cajero || 'N/A'} | <strong>Caja:</strong> ${egreso.caja}</small>
+                    ${egreso.referencia ? `<br><small><strong>Referencia:</strong> ${egreso.referencia}</small>` : ''}
+                </div>
+                <div>
+                    <button class="btn-accion editar" onclick="iniciarEdicionEgresoCaja('${egreso.id}')">Editar</button>
+                    <button class="btn-accion eliminar" onclick="eliminarEgresoCaja('${egreso.id}')">Eliminar</button>
+                </div>
+            </div>
+        `;
+
+        listaEgresosCaja.appendChild(div);
+    });
+}
+
+/**
+ * Inicia la edición de un egreso de caja
+ */
+function iniciarEdicionEgresoCaja(id) {
+    const egreso = estado.egresosCaja.find(e => e.id === id);
+    if (!egreso) return;
+
+    // Cargar datos en el formulario
+    document.getElementById('idEgresoCajaEditar').value = egreso.id;
+    document.getElementById('fechaEgresoCaja').value = egreso.fecha;
+    document.getElementById('cajaEgreso').value = egreso.caja;
+    document.getElementById('categoriaEgresoCaja').value = egreso.categoria;
+    document.getElementById('descripcionEgresoCaja').value = egreso.descripcion;
+    document.getElementById('referenciaEgresoCaja').value = egreso.referencia || '';
+
+    // Cargar desglose de billetes
+    document.querySelectorAll('#tablaDenominacionesEgresoCaja .cantidad-denominacion-egreso').forEach(input => {
+        const denominacion = input.dataset.denominacion;
+        input.value = egreso.efectivo[denominacion] || 0;
+    });
+
+    // Recalcular total
+    calcularTotalEgresoCaja();
+
+    // Cambiar texto del botón
+    document.querySelector('#formularioEgresoCaja button[type="submit"]').textContent = 'Actualizar Egreso';
+
+    // Scroll al formulario
+    document.getElementById('formularioEgresoCaja').scrollIntoView({ behavior: 'smooth' });
+    mostrarMensaje('Editando egreso. Realice los cambios y presione "Actualizar Egreso".', 'info');
+}
+
+/**
+ * Elimina un egreso de caja
+ */
+function eliminarEgresoCaja(id) {
+    if (confirm('¿Está seguro de que desea eliminar este egreso?')) {
+        estado.egresosCaja = estado.egresosCaja.filter(e => e.id !== id);
+        localStorage.setItem('egresosCaja', JSON.stringify(estado.egresosCaja));
+        cargarHistorialEgresosCaja();
+        mostrarMensaje('Egreso eliminado.', 'info');
+    }
+}
+
+/**
+ * Limpia el formulario de egresos de caja
+ */
+function limpiarFormularioEgresoCaja() {
+    document.getElementById('formularioEgresoCaja').reset();
+    document.getElementById('idEgresoCajaEditar').value = '';
+    document.getElementById('montoEgresoCaja').value = '0';
+
+    // Limpiar tabla de denominaciones
+    document.querySelectorAll('#tablaDenominacionesEgresoCaja .cantidad-denominacion-egreso').forEach(input => {
+        input.value = '0';
+    });
+    document.querySelectorAll('#tablaDenominacionesEgresoCaja .monto-parcial-egreso').forEach(celda => {
+        celda.textContent = '0';
+    });
+
+    // Resetear display del total
+    const totalDisplay = document.getElementById('totalEgresoCajaDisplay');
+    if (totalDisplay) {
+        totalDisplay.textContent = formatearMoneda(0, 'gs');
+    }
+
+    // Cambiar texto del botón
+    document.querySelector('#formularioEgresoCaja button[type="submit"]').textContent = 'Guardar Egreso';
+
+    // Establecer fecha actual
+    document.getElementById('fechaEgresoCaja').value = obtenerFechaHoraLocalISO();
+}
+
+
 function imprimirReciboGasto(gasto) {
     const montoEnLetras = numeroALetras(gasto.monto, gasto.moneda);
     const fechaFormateada = new Date(gasto.fecha).toLocaleDateString('es-PY', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -2658,6 +2870,47 @@ if (window.location.pathname.includes('usuarios.html')) {
         inicializarGestionUsuarios();
     }
 }
+
+// Detectar si estamos en la página de egresos de caja y ejecutar la inicialización
+if (window.location.pathname.includes('egresosCaja.html')) {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () {
+            // Inicializar la tabla de denominaciones
+            inicializarFormularioArqueo();
+
+            // Configurar event listener para el formulario
+            const formularioEgresoCaja = document.getElementById('formularioEgresoCaja');
+            if (formularioEgresoCaja) {
+                formularioEgresoCaja.addEventListener('submit', guardarEgresoCaja);
+            }
+
+            // Cargar historial inicial
+            cargarHistorialEgresosCaja();
+
+            // Establecer fecha actual
+            const fechaEgresoCaja = document.getElementById('fechaEgresoCaja');
+            if (fechaEgresoCaja) {
+                fechaEgresoCaja.value = obtenerFechaHoraLocalISO();
+            }
+        });
+    } else {
+        // El DOM ya está cargado
+        inicializarFormularioArqueo();
+
+        const formularioEgresoCaja = document.getElementById('formularioEgresoCaja');
+        if (formularioEgresoCaja) {
+            formularioEgresoCaja.addEventListener('submit', guardarEgresoCaja);
+        }
+
+        cargarHistorialEgresosCaja();
+
+        const fechaEgresoCaja = document.getElementById('fechaEgresoCaja');
+        if (fechaEgresoCaja) {
+            fechaEgresoCaja.value = obtenerFechaHoraLocalISO();
+        }
+    }
+}
+
 
 const style = document.createElement('style');
 style.textContent = `
