@@ -899,20 +899,26 @@ function renderizarVistaArqueoFinal(totales) {
     }
 
     let totalServiciosArqueo = 0;
+    let totalServiciosTarjeta = 0; // **NUEVO:** Variable para sumar solo tarjeta de servicios
     ['apLote', 'aquiPago', 'expressLote', 'wepa', 'pasajeNsa', 'encomiendaNsa', 'apostala'].forEach(key => {
         const servicio = totales.servicios[key];
         if (servicio) {
             totalServiciosArqueo += servicio.monto + servicio.tarjeta;
+            totalServiciosTarjeta += servicio.tarjeta; // Sumar solo tarjeta
         }
     });
     for (const nombre in totales.servicios.otros) {
-        totalServiciosArqueo += totales.servicios.otros[nombre].monto + totales.servicios.otros[nombre].tarjeta;
+        const servicio = totales.servicios.otros[nombre];
+        totalServiciosArqueo += servicio.monto + servicio.tarjeta;
+        totalServiciosTarjeta += servicio.tarjeta; // Sumar solo tarjeta
     }
 
     const totalEfectivoBruto = totalEfectivoFinal; // Solo efectivo en Gs
     const totalAEntregar = totalEfectivoBruto - fondoFijo;
     // El total de ingresos SÍ debe incluir el valor de las monedas extranjeras
-    const totalIngresosArqueo = totalEfectivoBruto + totalMonedasExtranjerasGs + totales.pagosTarjeta + totales.ventasCredito + totales.pedidosYa + totales.ventasTransferencia + totalServiciosArqueo;
+    // **MODIFICADO:** El usuario solicitó que el Total de Ingresos del Arqueo solo sume Ingresos no Efectivo y Servicios (SOLO EFECTIVO).
+    // Como el efectivo de servicios ya está en totalEfectivoBruto, NO sumamos totalServiciosTarjeta.
+    const totalIngresosArqueo = totalEfectivoBruto + totalMonedasExtranjerasGs + totales.pagosTarjeta + totales.ventasCredito + totales.pedidosYa + totales.ventasTransferencia;
 
     // **CORRECCIÓN DEFINITIVA:** Calcular el total de egresos a partir de los movimientos ya filtrados.
     const egresosDeCajaFiltrados = estado.egresosCaja.filter(e => e.fecha.startsWith(document.getElementById('fecha').value.split('T')[0]) && e.caja === cajaFiltro);
@@ -968,6 +974,7 @@ function renderizarVistaArqueoFinal(totales) {
                 </table>
                 <div class="resumen-totales" style="margin-top: 1rem;">
                     <div class="total-item"><span>Total Efectivo Bruto:</span><span>${formatearMoneda(totalEfectivoBruto, 'gs')}</span></div>
+                    <div class="total-item" style="color: var(--color-info);"><span>Total Efectivo Bruto + Fondo Fijo:</span><span>${formatearMoneda(totalEfectivoBruto + fondoFijo, 'gs')}</span></div>
                     <div class="total-item negativo"><span>- Fondo Fijo:</span><span>${formatearMoneda(fondoFijo, 'gs')}</span></div>
                     <div class="total-item final"><strong>Total a Entregar (G$):</strong><strong>${formatearMoneda(totalAEntregar, 'gs')}</strong></div>
                     ${totalesMonedasHTML}
@@ -1220,6 +1227,8 @@ function guardarArqueo() {
         .reduce((sum, m) => sum + m.valorVenta, 0);
     const totalIngresosOtrasVentas = arqueo.totalEfectivo - estado.movimientosTemporales.filter(m => m.valorVenta > 0).reduce((sum, m) => sum + m.efectivo[Object.keys(m.efectivo)[0]] * Object.keys(m.efectivo)[0], 0);
 
+    // **MODIFICADO:** El usuario solicitó que el Total de Ingresos del Arqueo solo sume Ingresos no Efectivo y Servicios (SOLO EFECTIVO).
+    // Como el efectivo de servicios ya está en totalEfectivo, NO sumamos totalServiciosTarjeta.
     arqueo.totalIngresos = arqueo.totalEfectivo + arqueo.pagosTarjeta + arqueo.ventasCredito + arqueo.pedidosYa + arqueo.ventasTransferencia;
 
     // **NUEVA VALIDACIÓN:** No guardar si el total de ingresos es cero.
