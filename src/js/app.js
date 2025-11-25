@@ -608,6 +608,7 @@ function renderizarIngresosAgregados() {
         // **MODIFICADO:** Detallar los servicios individualmente
         if (totalServicios > 0) {
             const agregarDetalleServicio = (nombre, servicio) => {
+                if (!servicio) return;
                 const totalServicio = servicio.monto + servicio.tarjeta;
                 if (totalServicio > 0) {
                     detallesHTML.push(`<p><span class="detalle-icono">⚙️</span><strong>${nombre}:</strong> ${formatearMoneda(totalServicio, 'gs')}</p>`);
@@ -3337,6 +3338,36 @@ function guardarServicioEfectivo() {
         }
     }
 
+    // Mapeo de nombres de servicios a claves internas
+    const mapaServicios = {
+        "AP Lote": "apLote",
+        "Aqui Pago": "aquiPago",
+        "Express Lote": "expressLote",
+        "Wepa": "wepa",
+        "Pasaje NSA": "pasajeNsa",
+        "Encomienda NSA": "encomiendaNsa",
+        "Apostala": "apostala"
+    };
+
+    const servicios = {};
+    const otrosServicios = [];
+
+    const keyServicio = mapaServicios[servicioSeleccionado];
+    if (keyServicio) {
+        servicios[keyServicio] = {
+            lote: null, // No hay campo de lote en este formulario por ahora
+            monto: montoServicio, // Monto en efectivo
+            tarjeta: 0
+        };
+    } else {
+        otrosServicios.push({
+            nombre: servicioSeleccionado,
+            lote: null,
+            monto: montoServicio,
+            tarjeta: 0
+        });
+    }
+
     // Crear el objeto de movimiento
     const nuevoMovimiento = {
         id: generarId(),
@@ -3353,8 +3384,8 @@ function guardarServicioEfectivo() {
         ventasCredito: 0,
         pedidosYa: 0,
         ventasTransferencia: 0,
-        servicios: {},
-        otrosServicios: []
+        servicios: servicios,
+        otrosServicios: otrosServicios
     };
 
     estado.movimientosTemporales.push(nuevoMovimiento);
