@@ -1211,15 +1211,22 @@ function guardarGasto(event) {
         mostrarMensaje('Movimiento actualizado con éxito.', 'exito');
     } else {
         // Modo Creación
-        estado.ultimoNumeroRecibo++; // Incrementar el número de recibo
+        const tipoGasto = document.getElementById('tipoGasto').value;
+        let numeroRecibo = null;
+
+        if (tipoGasto === 'egreso' || tipoGasto === 'operacion') {
+            estado.ultimoNumeroRecibo++; // Incrementar el número de recibo solo para estos tipos
+            numeroRecibo = estado.ultimoNumeroRecibo;
+        }
+
         const gasto = {
             id: generarId(),
             fecha: document.getElementById('fechaGasto').value,
-            tipo: document.getElementById('tipoGasto').value,
+            tipo: tipoGasto,
             historialEdiciones: [], // Inicializar historial
             receptor: receptorValue,
             descripcion: document.getElementById('descripcionGasto').value,
-            numeroRecibo: estado.ultimoNumeroRecibo,
+            numeroRecibo: numeroRecibo,
             monto: parsearMoneda(document.getElementById('montoGasto').value),
             moneda: document.getElementById('monedaGasto').value,
             // **CORREGIDO:** Asegurar que la caja de Tesorería se asigne si el campo está vacío.
@@ -1227,7 +1234,7 @@ function guardarGasto(event) {
             referencia: document.getElementById('referenciaGasto').value
         };
         estado.movimientos.push(gasto);
-        if (gasto.tipo !== 'gasto' && gasto.tipo !== 'transferencia') {
+        if (gasto.tipo === 'egreso' || gasto.tipo === 'operacion') {
             imprimirReciboGasto(gasto);
         }
         mostrarMensaje('Movimiento guardado exitosamente', 'exito');
@@ -1330,7 +1337,7 @@ function cargarHistorialGastos() {
                     <small>${formatearFecha(movimiento.fecha)} ${movimiento.caja ? '| ' + movimiento.caja : ''} ${movimiento.referencia ? '| Ref: ' + movimiento.referencia : ''} ${numeroReciboHTML}</small>
                 </div>
                 <div class="movimiento-acciones">
-                    <button class="btn-accion reimprimir" onclick="reimprimirRecibo('${movimiento.id}')">Reimprimir</button>
+                    ${movimiento.numeroRecibo ? `<button class="btn-accion reimprimir" onclick="reimprimirRecibo('${movimiento.id}')">Reimprimir</button>` : ''}
                     <button class="btn-accion editar" onclick="iniciarEdicionGasto('${movimiento.id}')">Editar</button>
                     <button class="btn-accion eliminar" onclick="eliminarGasto('${movimiento.id}')">Eliminar</button>
                 </div>
@@ -1600,7 +1607,7 @@ function limpiarFormularioEgresoCaja() {
     if (cajaSeleccionada) {
         document.getElementById('cajaEgreso').value = cajaSeleccionada;
     }
-    
+
     document.getElementById('idEgresoCajaEditar').value = '';
     document.getElementById('montoEgresoCaja').value = '0';
 
@@ -1884,7 +1891,10 @@ function eliminarEgresoCaja(id) {
 
 // Resumen de tesorería
 function cargarResumenDiario() {
-    const fechaDesde = document.getElementById('fechaResumenDesde').value;
+    const fechaDesdeInput = document.getElementById('fechaResumenDesde');
+    if (!fechaDesdeInput) return;
+
+    const fechaDesde = fechaDesdeInput.value;
     const fechaHasta = document.getElementById('fechaResumenHasta').value;
 
     // Obtener los contenedores del DOM
@@ -2288,7 +2298,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // **NUEVO:** Aplicar formato de separador de miles al campo de monto.
         const montoGastoInput = document.getElementById('montoGasto');
         aplicarFormatoMiles(montoGastoInput);
-        
+
         // **CORRECCIÓN:** Verificar que el elemento de filtro de fecha exista antes de asignarle un valor.
         const fechaFiltroGastos = document.getElementById('fechaFiltroGastos');
         if (fechaFiltroGastos) {
