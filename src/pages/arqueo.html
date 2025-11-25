@@ -40,33 +40,43 @@
                 </div>
             </div>
 
-            <div id="controlesArqueo" class="formulario-arqueo"
-                style="border-bottom: 2px solid var(--color-borde); padding-bottom: 1rem; margin-bottom: 1rem;">
-                <div class="form-grid">
-                    <div class="form-grupo">
-                        <label for="fecha">Fecha y Hora:</label>
-                        <input type="datetime-local" id="fecha" name="fecha" required>
-                    </div>
-                    <div class="form-grupo">
-                        <label for="caja">Caja:</label>
-                        <select id="caja" name="caja" required>
-                            <option value="Caja 1">Caja 1</option>
-                            <option value="Caja 2">Caja 2</option>
-                            <option value="Caja 3">Caja 3</option>
-                            <option value="Caja Tesoreria">Caja Tesoreria</option>
-                        </select>
+            <div class="resumen-card" style="margin-bottom: 2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h3 style="margin: 0; color: var(--color-primario);">Configuración del Arqueo</h3>
+                    <div class="form-botones" style="margin: 0;">
+                        <button type="button" class="btn btn-primario" onclick="guardarArqueo()">
+                            💾 Guardar Arqueo
+                        </button>
                     </div>
                 </div>
-                <div class="form-grid">
-                    <div class="form-grupo">
-                        <label for="cajero">Cajero:</label>
-                        <input type="text" id="cajero" name="cajero" placeholder="Nombre del cajero" required disabled>
+
+                <form id="controlesArqueo">
+                    <div class="form-grid">
+                        <div class="form-grupo">
+                            <label for="fecha">Fecha:</label>
+                            <input type="date" id="fecha" name="fecha" required>
+                        </div>
+                        <div class="form-grupo">
+                            <label for="caja">Caja:</label>
+                            <select id="caja" name="caja" required>
+                                <option value="Caja 1">Caja 1</option>
+                                <option value="Caja 2">Caja 2</option>
+                                <option value="Caja 3">Caja 3</option>
+                                <option value="Caja Tesoreria">Caja Tesoreria</option>
+                            </select>
+                        </div>
+                        <div class="form-grupo">
+                            <label for="cajero">Cajero:</label>
+                            <input type="text" id="cajero" name="cajero" placeholder="Nombre del cajero" required
+                                disabled style="background-color: #f1f5f9;">
+                        </div>
+                        <div class="form-grupo">
+                            <label for="fondoFijo">Fondo Fijo (G$):</label>
+                            <input type="text" inputmode="numeric" id="fondoFijo" value="0"
+                                style="font-size: 1.1rem; font-weight: bold; color: var(--color-primario);">
+                        </div>
                     </div>
-                    <div class="form-grupo">
-                        <label for="fondoFijo">Fondo Fijo (G$):</label>
-                        <input type="text" inputmode="numeric" id="fondoFijo" value="0">
-                    </div>
-                </div>
+                </form>
             </div>
 
             <div class="layout-grid-columnas">

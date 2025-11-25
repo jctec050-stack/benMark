@@ -793,3 +793,19 @@ body {
         display: block !important;
     }
 }
+
+/* Estilos para la tarjeta de resumen (Arqueo) */
+.resumen-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 0.5rem;
+    box-shadow: var(--sombra);
+    margin-bottom: 2rem;
+    border: 1px solid var(--color-borde);
+}
+
+.resumen-card h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-primario);
+}

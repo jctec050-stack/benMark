@@ -44,6 +44,15 @@ function parsearMoneda(valor) {
 }
 
 function formatearFecha(fecha) {
+    if (!fecha) return '';
+    // Si es solo fecha (YYYY-MM-DD), agregar hora para que sea local y no UTC
+    if (fecha.length === 10 && fecha.includes('-')) {
+        return new Date(fecha + 'T00:00:00').toLocaleDateString('es-PY', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+    }
     return new Date(fecha).toLocaleDateString('es-PY', {
         day: '2-digit',
         month: '2-digit',
@@ -131,7 +140,7 @@ function inicializarFormularioArqueo() {
     // Establecer fecha y hora actual
     const fechaArqueoInput = document.getElementById('fecha');
     if (fechaArqueoInput) {
-        fechaArqueoInput.value = obtenerFechaHoraLocalISO();
+        fechaArqueoInput.value = obtenerFechaHoraLocalISO().split('T')[0];
     }
 }
 
@@ -339,7 +348,7 @@ function agregarMovimiento() {
         // **CORREGIDO:** Asegurar que la caja sea la correcta para cada rol.
         caja: sessionStorage.getItem('userRole') === 'tesoreria'
             ? 'Caja Tesoreria'
-            : (sessionStorage.getItem('cajaSeleccionada') || 'N/A'),
+            : (sessionStorage.getItem('cajaSeleccionada') || 'Caja 1'),
         historialEdiciones: [], // Inicializamos el historial de ediciones
         valorVenta: esVentaConVuelto ? totalVenta : 0, // **NUEVO:** Guardar el valor real de la venta
         efectivoVuelto: {}, // **NUEVO:** Para guardar el desglose del vuelto
@@ -961,8 +970,13 @@ function renderizarVistaArqueoFinal(totales) {
  * 3. Llama a la función de renderizado.
  */
 function actualizarArqueoFinal() {
-    const fechaArqueo = document.getElementById('fecha').value.split('T')[0];
-    const cajaFiltro = document.getElementById('caja').value;
+    const fechaInput = document.getElementById('fecha');
+    const cajaInput = document.getElementById('caja');
+
+    if (!fechaInput || !cajaInput) return;
+
+    const fechaArqueo = fechaInput.value.split('T')[0];
+    const cajaFiltro = cajaInput.value;
 
     // 1. Obtener ingresos del día
     let ingresosParaArqueo = estado.movimientosTemporales;
@@ -2253,7 +2267,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 const dateFieldId = fields[formId];
                 const dateField = document.getElementById(dateFieldId);
                 if (dateField) {
-                    dateField.value = obtenerFechaHoraLocalISO();
+                    if (dateField.type === 'date') {
+                        dateField.value = obtenerFechaHoraLocalISO().split('T')[0];
+                    } else {
+                        dateField.value = obtenerFechaHoraLocalISO();
+                    }
                 }
             }
         }
