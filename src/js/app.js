@@ -18,6 +18,17 @@ const CONFIG = {
     }
 };
 
+// **NUEVO:** Constante para centralizar los servicios de pagos
+const SERVICIOS_PAGOS = [
+    "AP Lote",
+    "Aqui Pago",
+    "Express Lote",
+    "Wepa",
+    "Pasaje NSA",
+    "Encomienda NSA",
+    "Apostala"
+];
+
 // Estado de la aplicación
 let estado = {
     arqueos: JSON.parse(localStorage.getItem('arqueos')) || [],
@@ -2414,6 +2425,8 @@ document.addEventListener('DOMContentLoaded', function () {
             filtroFechaIngresos.value = obtenerFechaHoraLocalISO().split('T')[0];
         }
         renderizarIngresosAgregados();
+        // **NUEVO:** Inicializar la nueva sección de servicios en efectivo
+        inicializarSeccionServiciosEfectivo();
     }
     if (document.getElementById('formularioEgresoCaja')) {
         inicializarFormularioArqueo();
@@ -3139,3 +3152,242 @@ disabledStyles.textContent = `
     }
 `;
 document.head.appendChild(disabledStyles);
+
+// =================================================================================
+// INICIO: LÓGICA PARA LA SECCIÓN DE REGISTRO EFECTIVO POR SERVICIOS
+// =================================================================================
+
+const servicioEfectivoSelect = document.getElementById('servicioEfectivoSelect');
+const montoServicioEfectivoInput = document.getElementById('montoServicioEfectivo');
+const montoRecibidoServicioInput = document.getElementById('montoRecibidoServicio');
+const vueltoCalculadoServicioDisplay = document.getElementById('vueltoCalculadoServicio');
+
+function inicializarSeccionServiciosEfectivo() {
+    if (!servicioEfectivoSelect) return;
+
+    // 1. Poblar el select de servicios
+    SERVICIOS_PAGOS.forEach(s => servicioEfectivoSelect.add(new Option(s, s)));
+
+    // 2. Añadir listeners para formateo y cálculo de vuelto
+    [montoServicioEfectivoInput, montoRecibidoServicioInput].forEach(input => {
+        if (input) {
+            aplicarFormatoMiles(input);
+            input.addEventListener('input', calcularVueltoServicio);
+        }
+    });
+}
+
+function calcularVueltoServicio() {
+    if (!montoServicioEfectivoInput || !montoRecibidoServicioInput || !vueltoCalculadoServicioDisplay) return;
+    const montoTotal = parsearMoneda(montoServicioEfectivoInput.value);
+    const montoRecibido = parsearMoneda(montoRecibidoServicioInput.value);
+    const vuelto = (montoRecibido > montoTotal) ? montoRecibido - montoTotal : 0;
+
+    vueltoCalculadoServicioDisplay.textContent = formatearMoneda(vuelto, 'gs');
+}
+
+function abrirModalServicioEfectivo() {
+    const servicio = servicioEfectivoSelect.value;
+    const montoTotal = parsearMoneda(montoServicioEfectivoInput.value);
+    const montoRecibido = parsearMoneda(montoRecibidoServicioInput.value);
+
+    if (!servicio) {
+        mostrarMensaje('Por favor, seleccione un servicio.', 'peligro');
+        return;
+    }
+    if (montoTotal <= 0) {
+        mostrarMensaje('El "Monto del Servicio" debe ser mayor a cero.', 'peligro');
+        return;
+    }
+    if (montoRecibido < montoTotal) {
+        mostrarMensaje('El "Monto Recibido" debe ser igual o mayor al monto del servicio.', 'peligro');
+        return;
+    }
+
+    const vuelto = montoRecibido - montoTotal;
+
+    // Llenar el modal con los datos del formulario principal
+    document.getElementById('totalServicioModal').value = formatearMoneda(montoTotal, 'gs');
+    document.getElementById('montoRecibidoModal').value = formatearMoneda(montoRecibido, 'gs');
+    document.getElementById('vueltoCalculadoModal').textContent = formatearMoneda(vuelto, 'gs');
+
+    // Generar la tabla para el desglose de billetes recibidos
+    const tablaBody = document.getElementById('tablaServicioRecibido');
+    tablaBody.innerHTML = '';
+    CONFIG.denominaciones.forEach(denom => {
+        tablaBody.innerHTML += `
+            <tr>
+                <td>${denom.nombre}</td>
+                <td><input type="number" class="cantidad-servicio-recibido" data-denominacion="${denom.valor}" min="0" value="0"></td>
+                <td class="monto-servicio-recibido" data-denominacion="${denom.valor}">0</td>
+            </tr>
+        `;
+    });
+
+    // Añadir listener a la nueva tabla del modal
+    tablaBody.addEventListener('input', (e) => {
+        if (e.target.classList.contains('cantidad-servicio-recibido')) {
+            const input = e.target;
+            const monto = (parseInt(input.value) || 0) * parseInt(input.dataset.denominacion);
+            input.closest('tr').querySelector('.monto-servicio-recibido').textContent = formatearMoneda(monto, 'gs');
+            calcularTotalServicioRecibido();
+        }
+    });
+
+    // **NUEVO:** Gestionar la sección de registro de vuelto
+    const seccionVuelto = document.getElementById('registroVueltoServicioSeccion');
+    if (vuelto > 0) {
+        seccionVuelto.style.display = 'block';
+        const tablaVueltoBody = document.getElementById('tablaVueltoServicio');
+        tablaVueltoBody.innerHTML = '';
+        CONFIG.denominaciones.forEach(denom => {
+            tablaVueltoBody.innerHTML += `
+                <tr>
+                    <td>${denom.nombre}</td>
+                    <td><input type="number" class="cantidad-vuelto-servicio" data-denominacion="${denom.valor}" min="0" value="0"></td>
+                    <td class="monto-vuelto-servicio" data-denominacion="${denom.valor}">0</td>
+                </tr>
+            `;
+        });
+
+        tablaVueltoBody.addEventListener('input', (e) => {
+            if (e.target.classList.contains('cantidad-vuelto-servicio')) {
+                const input = e.target;
+                const monto = (parseInt(input.value) || 0) * parseInt(input.dataset.denominacion);
+                input.closest('tr').querySelector('.monto-vuelto-servicio').textContent = formatearMoneda(monto, 'gs');
+                calcularTotalVueltoServicioRegistrado();
+            }
+        });
+        calcularTotalVueltoServicioRegistrado(); // Inicializar en G$ 0
+
+    } else {
+        seccionVuelto.style.display = 'none';
+        document.getElementById('tablaVueltoServicio').innerHTML = '';
+    }
+
+    // Abrir el modal
+    abrirModal('contenido-servicio-efectivo', `Registrar Billetes para: ${servicio}`);
+    calcularTotalServicioRecibido(); // Para inicializar el total en G$ 0
+}
+
+function calcularTotalServicioRecibido() {
+    let total = 0;
+    document.querySelectorAll('#tablaServicioRecibido .cantidad-servicio-recibido').forEach(input => {
+        total += (parseInt(input.value) || 0) * parseInt(input.dataset.denominacion);
+    });
+
+    const displayTotal = document.getElementById('totalServicioRecibidoDisplay');
+    const montoRecibido = parsearMoneda(document.getElementById('montoRecibidoModal').value);
+    displayTotal.textContent = formatearMoneda(total, 'gs');
+    displayTotal.style.color = (total === montoRecibido) ? 'var(--color-exito)' : 'var(--color-peligro)';
+}
+
+function calcularTotalVueltoServicioRegistrado() {
+    let total = 0;
+    document.querySelectorAll('#tablaVueltoServicio .cantidad-vuelto-servicio').forEach(input => {
+        total += (parseInt(input.value) || 0) * parseInt(input.dataset.denominacion);
+    });
+
+    const displayTotal = document.getElementById('totalVueltoServicioVerificacion');
+    const vueltoCalculado = parsearMoneda(document.getElementById('vueltoCalculadoModal').textContent);
+
+    displayTotal.textContent = `Total Vuelto Registrado: ${formatearMoneda(total, 'gs')}`;
+    displayTotal.style.color = (total === vueltoCalculado) ? 'var(--color-exito)' : 'var(--color-peligro)';
+}
+
+function guardarServicioEfectivo() {
+    const servicioSeleccionado = servicioEfectivoSelect.value;
+    const montoServicio = parsearMoneda(document.getElementById('totalServicioModal').value);
+    const montoRecibido = parsearMoneda(document.getElementById('montoRecibidoModal').value);
+    const vuelto = montoRecibido - montoServicio;
+
+    // Validar que el desglose de billetes coincida con el monto recibido
+    let totalDesgloseRecibido = 0;
+    const desgloseEfectivo = {};
+    document.querySelectorAll('#tablaServicioRecibido .cantidad-servicio-recibido').forEach(input => {
+        const cantidad = parseInt(input.value) || 0;
+        if (cantidad > 0) {
+            const denominacion = input.dataset.denominacion;
+            desgloseEfectivo[denominacion] = cantidad;
+            totalDesgloseRecibido += cantidad * parseInt(denominacion);
+        }
+    });
+
+    if (totalDesgloseRecibido !== montoRecibido) {
+        mostrarMensaje('El desglose de billetes no coincide con el monto recibido del cliente. Por favor, verifique.', 'peligro');
+        return;
+    }
+
+    // **NUEVO:** Validar que el desglose del vuelto coincida con el vuelto calculado
+    let totalDesgloseVuelto = 0;
+    const desgloseVuelto = {};
+    if (vuelto > 0) {
+        document.querySelectorAll('#tablaVueltoServicio .cantidad-vuelto-servicio').forEach(input => {
+            const cantidad = parseInt(input.value) || 0;
+            if (cantidad > 0) {
+                const denominacion = input.dataset.denominacion;
+                desgloseVuelto[denominacion] = cantidad;
+                totalDesgloseVuelto += cantidad * parseInt(denominacion);
+            }
+        });
+
+        if (totalDesgloseVuelto !== vuelto) {
+            mostrarMensaje('El desglose de billetes del vuelto no coincide con el monto de vuelto a entregar. Por favor, verifique.', 'peligro');
+            return;
+        }
+    }
+
+    // Crear el objeto de movimiento
+    const nuevoMovimiento = {
+        id: generarId(),
+        fecha: obtenerFechaHoraLocalISO(),
+        caja: obtenerCajaActiva(),
+        descripcion: `Ingreso por servicio: ${servicioSeleccionado}`,
+        valorVenta: montoServicio,
+        efectivo: desgloseEfectivo,
+        // **NUEVO:** Guardar el desglose del vuelto
+        efectivoVuelto: desgloseVuelto,
+        historialEdiciones: [],
+        monedasExtranjeras: {},
+        pagosTarjeta: 0,
+        ventasCredito: 0,
+        pedidosYa: 0,
+        ventasTransferencia: 0,
+        servicios: {},
+        otrosServicios: []
+    };
+
+    estado.movimientosTemporales.push(nuevoMovimiento);
+    guardarEnLocalStorage();
+    renderizarIngresosAgregados();
+    actualizarArqueoFinal();
+
+    mostrarMensaje(`Ingreso por "${servicioSeleccionado}" guardado.`, 'exito');
+
+    cerrarModal();
+    limpiarFormularioServicioEfectivo();
+}
+
+function limpiarFormularioServicioEfectivo() {
+    if (!servicioEfectivoSelect) return;
+    servicioEfectivoSelect.value = "";
+    montoServicioEfectivoInput.value = "";
+    montoRecibidoServicioInput.value = "";
+    calcularVueltoServicio();
+    servicioEfectivoSelect.focus();
+}
+
+function obtenerCajaActiva() {
+    return sessionStorage.getItem('cajaSeleccionada') || (sessionStorage.getItem('userRole') === 'tesoreria' ? 'Caja Tesoreria' : 'Caja 1');
+}
+
+// =================================================================================
+// FIN: LÓGICA PARA LA SECCIÓN DE REGISTRO EFECTIVO POR SERVICIOS
+// =================================================================================
+
+// =================================================================================
+// FIN: LÓGICA PARA LA SECCIÓN DE REGISTRO EFECTIVO POR SERVICIOS
+// =================================================================================
+
+// Asegurar que la función cerrarSesion sea globalmente accesible
+window.cerrarSesion = cerrarSesion;
