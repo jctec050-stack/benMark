@@ -337,10 +337,14 @@
                 <div class="form-grid" style="grid-template-columns: 2fr 1fr 1fr; align-items: flex-end;">
                     <div class="form-grupo">
                         <label for="servicioEfectivoSelect">Seleccionar Servicio:</label>
-                        <select id="servicioEfectivoSelect" required>
-                            <option value="" disabled selected>-- Elija un servicio --</option>
-                            <!-- Las opciones se cargarán dinámicamente con JavaScript -->
-                        </select>
+                        <div style="display: flex; gap: 5px;">
+                            <select id="servicioEfectivoSelect" required style="flex: 1;">
+                                <option value="" disabled selected>-- Elija un servicio --</option>
+                                <!-- Las opciones se cargarán dinámicamente con JavaScript -->
+                            </select>
+                            <button type="button" class="btn btn-primario" onclick="agregarNuevoServicio()"
+                                title="Agregar nuevo servicio" style="padding: 0 15px; font-size: 1.2rem;">+</button>
+                        </div>
                     </div>
                     <div class="form-grupo">
                         <label for="montoServicioEfectivo">Monto del Servicio (G$):</label>
@@ -371,7 +375,6 @@
                 </div>
             </section>
 
-
             <!-- Historial de Ingresos Agregados -->
             <div class="historial-gastos" style="margin-top: 2rem;">
                 <h3>Historial de Ingresos Agregados</h3>
@@ -388,7 +391,8 @@
                         oninput="renderizarIngresosAgregados()">
                 </div>
                 <div id="listaIngresosAgregados" class="lista-movimientos">
-                    <p class="text-center" style="color: var(--color-secundario);">Aún no se han agregado movimientos.
+                    <p class="text-center" style="color: var(--color-secundario);">Aún no se han agregado
+                        movimientos.
                     </p>
                 </div>
             </div>

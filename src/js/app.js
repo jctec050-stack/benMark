@@ -19,7 +19,8 @@ const CONFIG = {
 };
 
 // **NUEVO:** Constante para centralizar los servicios de pagos
-const SERVICIOS_PAGOS = [
+// **MODIFICADO:** Lista de servicios dinámica cargada desde localStorage
+const SERVICIOS_DEFAULT = [
     "Aca Puedo",
     "Aqui Pago",
     "Pago Express",
@@ -28,6 +29,69 @@ const SERVICIOS_PAGOS = [
     "Encomienda NSA",
     "Apostala"
 ];
+
+let SERVICIOS_PAGOS = JSON.parse(localStorage.getItem('serviciosPagos')) || SERVICIOS_DEFAULT;
+
+// Función para cargar los servicios en el select
+function cargarServicios() {
+    const select = document.getElementById('servicioEfectivoSelect');
+    if (!select) return;
+
+    // Guardar la selección actual si existe
+    const valorActual = select.value;
+
+    // Limpiar opciones excepto el placeholder
+    while (select.options.length > 1) {
+        select.remove(1);
+    }
+
+    SERVICIOS_PAGOS.forEach(servicio => {
+        const option = document.createElement('option');
+        option.value = servicio;
+        option.textContent = servicio;
+        select.appendChild(option);
+    });
+
+    // Restaurar selección si aún existe
+    if (SERVICIOS_PAGOS.includes(valorActual)) {
+        select.value = valorActual;
+    }
+}
+
+// Función para agregar un nuevo servicio
+window.agregarNuevoServicio = function () {
+    const nuevoServicio = prompt("Ingrese el nombre del nuevo servicio:");
+    if (nuevoServicio && nuevoServicio.trim() !== "") {
+        const nombreServicio = nuevoServicio.trim();
+
+        // Verificar si ya existe (case insensitive)
+        const existe = SERVICIOS_PAGOS.some(s => s.toLowerCase() === nombreServicio.toLowerCase());
+
+        if (existe) {
+            alert("Este servicio ya existe en la lista.");
+            return;
+        }
+
+        SERVICIOS_PAGOS.push(nombreServicio);
+        SERVICIOS_PAGOS.sort(); // Mantener orden alfabético
+
+        // Guardar en localStorage
+        localStorage.setItem('serviciosPagos', JSON.stringify(SERVICIOS_PAGOS));
+
+        // Recargar el dropdown
+        cargarServicios();
+
+        // Seleccionar el nuevo servicio
+        const select = document.getElementById('servicioEfectivoSelect');
+        if (select) {
+            select.value = nombreServicio;
+        }
+
+        alert(`Servicio "${nombreServicio}" agregado correctamente.`);
+    }
+};
+
+
 
 // Estado de la aplicación
 let estado = {
@@ -3441,12 +3505,7 @@ function limpiarFormularioServicioEfectivo() {
     montoServicioEfectivoInput.value = "";
     montoRecibidoServicioInput.value = "";
 
-    // **NUEVO:** Limpiar campo otro
-    const inputOtro = document.getElementById('nombreServicioOtro');
-    if (inputOtro) {
-        inputOtro.value = "";
-        inputOtro.style.display = "none";
-    }
+
 
     calcularVueltoServicio();
     servicioEfectivoSelect.focus();
@@ -3471,19 +3530,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const servicioEfectivoSelect = document.getElementById('servicioEfectivoSelect');
     const montoServicioEfectivoInput = document.getElementById('montoServicioEfectivo');
     const montoRecibidoServicioInput = document.getElementById('montoRecibidoServicio');
-    const nombreServicioOtroInput = document.getElementById('nombreServicioOtro');
+
     const vueltoCalculadoServicio = document.getElementById('vueltoCalculadoServicio');
 
     // Poblar el selector de servicios
-    if (servicioEfectivoSelect && servicioEfectivoSelect.options.length === 1) {
-        // Solo poblar si está vacío (solo tiene el placeholder)
-        SERVICIOS_PAGOS.forEach(servicio => {
-            const option = document.createElement('option');
-            option.value = servicio;
-            option.textContent = servicio;
-            servicioEfectivoSelect.appendChild(option);
-        });
-    }
+    cargarServicios();
 
     // Calcular vuelto automáticamente
     const calcularVueltoServicio = () => {
