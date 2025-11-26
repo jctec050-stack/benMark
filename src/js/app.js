@@ -810,6 +810,7 @@ function calcularTotalesArqueo(movimientosParaArqueo) {
         ventasCredito: 0,
         pedidosYa: 0,
         ventasTransferencia: 0,
+        totalIngresosTienda: 0, // **NUEVO:** Para sumar solo ingresos de tienda (no servicios)
         servicios: {
             apLote: { lotes: [], monto: 0, tarjeta: 0 },
             aquiPago: { lotes: [], monto: 0, tarjeta: 0 },
@@ -828,6 +829,22 @@ function calcularTotalesArqueo(movimientosParaArqueo) {
     });
 
     movimientosParaArqueo.forEach(mov => {
+        // **NUEVA LÓGICA:** Identificar si es un ingreso de tienda
+        if (mov.tipoMovimiento === 'ingreso') {
+            let esServicio = false;
+            if (mov.servicios) {
+                for (const key in mov.servicios) {
+                    if (mov.servicios[key].monto > 0) esServicio = true;
+                }
+            }
+            if (mov.otrosServicios && mov.otrosServicios.length > 0) {
+                if (mov.otrosServicios.some(s => s.monto > 0)) esServicio = true;
+            }
+
+            if (!esServicio) {
+                totales.totalIngresosTienda += mov.valorVenta > 0 ? mov.valorVenta : Object.entries(mov.efectivo).reduce((sum, [denom, cant]) => sum + (parseInt(denom) * cant), 0);
+            }
+        }
         // Sumar/Restar efectivo por denominación
         if (mov.efectivo) {
             for (const [denominacion, cantidad] of Object.entries(mov.efectivo)) {
@@ -960,28 +977,24 @@ function renderizarVistaArqueoFinal(totales) {
     }
 
     let totalServiciosArqueo = 0;
-    let totalServiciosTarjeta = 0; // **NUEVO:** Variable para sumar solo tarjeta de servicios
+    let totalServiciosEfectivo = 0; // **NUEVO:** Variable para sumar solo efectivo de servicios
     ['apLote', 'aquiPago', 'expressLote', 'wepa', 'pasajeNsa', 'encomiendaNsa', 'apostala'].forEach(key => {
         const servicio = totales.servicios[key];
         if (servicio) {
             totalServiciosArqueo += servicio.monto + servicio.tarjeta;
-            totalServiciosTarjeta += servicio.tarjeta; // Sumar solo tarjeta
+            totalServiciosEfectivo += servicio.monto; // Sumar solo efectivo
         }
     });
     for (const nombre in totales.servicios.otros) {
         const servicio = totales.servicios.otros[nombre];
         totalServiciosArqueo += servicio.monto + servicio.tarjeta;
-        totalServiciosTarjeta += servicio.tarjeta; // Sumar solo tarjeta
+        totalServiciosEfectivo += servicio.monto; // Sumar solo efectivo
     }
 
     const totalEfectivoBruto = totalEfectivoFinal; // Solo efectivo en Gs
     const totalAEntregar = totalEfectivoBruto - fondoFijo;
-    // El total de ingresos SÍ debe incluir el valor de las monedas extranjeras
-    // **MODIFICADO:** El usuario solicitó que el Total de Ingresos del Arqueo solo sume Ingresos no Efectivo y Servicios (SOLO EFECTIVO).
-    // Como el efectivo de servicios ya está en totalEfectivoBruto, NO sumamos totalServiciosTarjeta.
-    const totalIngresosArqueo = totalEfectivoBruto + totalMonedasExtranjerasGs + totales.pagosTarjeta + totales.ventasCredito + totales.pedidosYa + totales.ventasTransferencia;
+    const totalIngresoEfectivo = totalServiciosEfectivo; // **NUEVA LÓGICA:** El total de ingreso efectivo es solo el efectivo de servicios.
 
-    // **CORRECCIÓN DEFINITIVA:** Calcular el total de egresos a partir de los movimientos ya filtrados.
     const egresosDeCajaFiltrados = estado.egresosCaja.filter(e => e.fecha.startsWith(document.getElementById('fecha').value.split('T')[0]) && e.caja === cajaFiltro);
     const egresosDeOperacionesFiltrados = estado.movimientos.filter(m =>
         m.fecha.startsWith(document.getElementById('fecha').value.split('T')[0]) &&
@@ -991,9 +1004,8 @@ function renderizarVistaArqueoFinal(totales) {
 
     const totalEgresosCaja = egresosDeCajaFiltrados.reduce((sum, e) => sum + e.monto, 0) +
         egresosDeOperacionesFiltrados.reduce((sum, m) => sum + m.monto, 0);
-    // --- FIN DE LA CORRECCIÓN ---
 
-    const totalNeto = totalIngresosArqueo - totalEgresosCaja;
+    const totalNeto = (totales.totalIngresosTienda + totalIngresoEfectivo) - totalEgresosCaja;
 
     // Preparar HTML para totales de monedas extranjeras
     let totalesMonedasHTML = '';
@@ -1059,7 +1071,8 @@ function renderizarVistaArqueoFinal(totales) {
 
         <!-- Resumen Final del Arqueo -->
         <div class="resumen-totales" style="margin-top: 2rem; border-top: 1px solid var(--color-borde); padding-top: 1rem;">
-            <div class="total-item positivo"><span>Total Ingresos del Arqueo:</span><span>${formatearMoneda(totalIngresosArqueo, 'gs')}</span></div>
+            <div class="total-item positivo"><span>Total Ingresos Tienda:</span><span>${formatearMoneda(totales.totalIngresosTienda, 'gs')}</span></div>
+            <div class="total-item positivo"><span>Total Efectivo Servicios:</span><span>${formatearMoneda(totalIngresoEfectivo, 'gs')}</span></div>
             <div class="total-item negativo"><span>- Total Egresos de Caja:</span><span>${formatearMoneda(totalEgresosCaja, 'gs')}</span></div>
             <div class="total-item ${totalNeto >= 0 ? 'positivo' : 'negativo'}"><strong>Total Neto del Arqueo:</strong><strong>${formatearMoneda(totalNeto, 'gs')}</strong></div>
         </div>
