@@ -499,11 +499,10 @@ function agregarMovimiento() {
     document.querySelectorAll('.fila-servicio-dinamico').forEach(fila => {
         const nombre = fila.querySelector('.nombre-servicio-dinamico').value;
         const lote = fila.querySelector('.lote-servicio-dinamico').value;
-        const monto = parsearMoneda(fila.querySelector('.monto-servicio-dinamico').value);
         const tarjeta = parsearMoneda(fila.querySelector('.tarjeta-servicio-dinamico').value);
 
-        if (nombre && (monto > 0 || tarjeta > 0)) {
-            movimiento.otrosServicios.push({ nombre, lote, monto, tarjeta });
+        if (nombre && tarjeta > 0) {
+            movimiento.otrosServicios.push({ nombre, lote, monto: 0, tarjeta });
         }
     });
 
@@ -532,7 +531,7 @@ function agregarMovimiento() {
 }
 
 // Función para agregar una fila de servicio dinámico
-function agregarFilaServicio() {
+function agregarFilaServicioDinamico() {
     const tbody = document.getElementById('tbodyServiciosMovimiento');
     const fila = document.createElement('tr');
     fila.className = 'fila-servicio-dinamico';
@@ -540,13 +539,12 @@ function agregarFilaServicio() {
     fila.innerHTML = `
         <td><input type="text" class="nombre-servicio-dinamico" placeholder="Nombre del servicio"></td>
         <td><input type="text" class="lote-servicio-dinamico" placeholder="Lote/Ref"></td>
-        <td><input type="text" inputmode="numeric" class="monto-servicio-dinamico" value="0"></td>
         <td><input type="text" inputmode="numeric" class="tarjeta-servicio-dinamico" value="0"></td>
     `;
     tbody.appendChild(fila);
 
     // Aplicar formato de miles a los nuevos campos
-    const camposNuevos = fila.querySelectorAll('.monto-servicio-dinamico, .tarjeta-servicio-dinamico');
+    const camposNuevos = fila.querySelectorAll('.tarjeta-servicio-dinamico');
     camposNuevos.forEach(aplicarFormatoMiles);
 }
 
@@ -769,11 +767,10 @@ function iniciarEdicionMovimiento(index) {
     // Limpiar y cargar otros servicios dinámicos
     limpiarFilasServiciosDinamicos();
     movimiento.otrosServicios.forEach(servicio => {
-        agregarFilaServicio(); // Crea una nueva fila vacía
+        agregarFilaServicioDinamico(); // Crea una nueva fila vacía
         const nuevaFila = document.querySelector('.fila-servicio-dinamico:last-child');
         nuevaFila.querySelector('.nombre-servicio-dinamico').value = servicio.nombre;
         nuevaFila.querySelector('.lote-servicio-dinamico').value = servicio.lote;
-        nuevaFila.querySelector('.monto-servicio-dinamico').value = servicio.monto;
         nuevaFila.querySelector('.tarjeta-servicio-dinamico').value = servicio.tarjeta;
     });
 
