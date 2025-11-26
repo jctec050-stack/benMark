@@ -20,9 +20,9 @@ const CONFIG = {
 
 // **NUEVO:** Constante para centralizar los servicios de pagos
 const SERVICIOS_PAGOS = [
-    "AP Lote",
+    "Aca Puedo",
     "Aqui Pago",
-    "Express Lote",
+    "Pago Express",
     "Wepa",
     "Pasaje NSA",
     "Encomienda NSA",
@@ -34,9 +34,8 @@ let estado = {
     arqueos: JSON.parse(localStorage.getItem('arqueos')) || [],
     movimientos: JSON.parse(localStorage.getItem('movimientos')) || [],
     egresosCaja: JSON.parse(localStorage.getItem('egresosCaja')) || [],
-    movimientosTemporales: JSON.parse(localStorage.getItem('movimientosTemporales')) || [], // Para los ingresos de caja del día
-    seccionActiva: 'ingreso-movimiento',
-    ultimoNumeroRecibo: JSON.parse(localStorage.getItem('ultimoNumeroRecibo')) || 0
+    movimientosTemporales: JSON.parse(localStorage.getItem('movimientosTemporales')) || [], // Para los ingresos de caja del día seccionActiva: 'ingreso-movimiento',
+    ultimoNumeroRecibo: JSON.parse(localStorage.getItem('ultimoNumeroRecibo')) || 0,
 };
 
 // Funciones de utilidad
@@ -366,7 +365,20 @@ function agregarMovimiento() {
     const esEdicion = indiceEditar !== '';
 
 
-    const obtenerValorParseado = (id) => parsearMoneda(document.getElementById(id).value);
+    const obtenerValorParseado = (id) => {
+        const element = document.getElementById(id);
+        return element ? parsearMoneda(element.value) : 0;
+    };
+
+    const obtenerValorInput = (selector) => {
+        const element = document.querySelector(selector);
+        return element ? parseFloat(element.value) || 0 : 0;
+    };
+
+    const obtenerValorTexto = (id) => {
+        const element = document.getElementById(id);
+        return element ? element.value : '';
+    };
 
     const movimiento = {
         fecha: document.getElementById('fechaMovimiento').value,
@@ -381,22 +393,22 @@ function agregarMovimiento() {
         descripcion: document.getElementById('descripcionMovimiento').value || '',
         efectivo: {},
         monedasExtranjeras: {
-            usd: { cantidad: parseFloat(document.querySelector('.cantidad-moneda-movimiento[data-moneda="usd"]').value) || 0, cotizacion: obtenerCotizacion('usd', true) },
-            brl: { cantidad: parseFloat(document.querySelector('.cantidad-moneda-movimiento[data-moneda="brl"]').value) || 0, cotizacion: obtenerCotizacion('brl', true) },
-            ars: { cantidad: parseFloat(document.querySelector('.cantidad-moneda-movimiento[data-moneda="ars"]').value) || 0, cotizacion: obtenerCotizacion('ars', true) }
+            usd: { cantidad: obtenerValorInput('.cantidad-moneda-movimiento[data-moneda="usd"]'), cotizacion: obtenerCotizacion('usd', true) },
+            brl: { cantidad: obtenerValorInput('.cantidad-moneda-movimiento[data-moneda="brl"]'), cotizacion: obtenerCotizacion('brl', true) },
+            ars: { cantidad: obtenerValorInput('.cantidad-moneda-movimiento[data-moneda="ars"]'), cotizacion: obtenerCotizacion('ars', true) }
         },
         pagosTarjeta: obtenerValorParseado('pagosTarjetaMovimiento'),
         ventasCredito: obtenerValorParseado('ventasCreditoMovimiento'),
         pedidosYa: obtenerValorParseado('pedidosYaMovimiento'),
         ventasTransferencia: obtenerValorParseado('ventasTransfMovimiento'),
         servicios: {
-            apLote: { lote: document.getElementById('apLoteCantMovimiento').value, monto: 0, tarjeta: obtenerValorParseado('apLoteTarjetaMovimiento') },
-            aquiPago: { lote: document.getElementById('aquiPagoLoteMovimiento').value, monto: 0, tarjeta: obtenerValorParseado('aquiPagoTarjetaMovimiento') },
-            expressLote: { lote: document.getElementById('expressCantMovimiento').value, monto: 0, tarjeta: obtenerValorParseado('expressTarjetaMovimiento') },
-            wepa: { lote: document.getElementById('wepaFechaMovimiento').value, monto: 0, tarjeta: obtenerValorParseado('wepaTarjetaMovimiento') },
-            pasajeNsa: { lote: document.getElementById('pasajeNsaLoteMovimiento').value, monto: 0, tarjeta: obtenerValorParseado('pasajeNsaTarjetaMovimiento') },
-            encomiendaNsa: { lote: document.getElementById('encomiendaNsaLoteMovimiento').value, monto: 0, tarjeta: obtenerValorParseado('encomiendaNsaTarjetaMovimiento') },
-            apostala: { lote: document.getElementById('apostalaLoteMovimiento').value, monto: 0, tarjeta: obtenerValorParseado('apostalaTarjetaMovimiento') }
+            apLote: { lote: obtenerValorTexto('apLoteCantMovimiento'), monto: 0, tarjeta: obtenerValorParseado('apLoteTarjetaMovimiento') },
+            aquiPago: { lote: obtenerValorTexto('aquiPagoLoteMovimiento'), monto: 0, tarjeta: obtenerValorParseado('aquiPagoTarjetaMovimiento') },
+            expressLote: { lote: obtenerValorTexto('expressCantMovimiento'), monto: 0, tarjeta: obtenerValorParseado('expressTarjetaMovimiento') },
+            wepa: { lote: obtenerValorTexto('wepaFechaMovimiento'), monto: 0, tarjeta: obtenerValorParseado('wepaTarjetaMovimiento') },
+            pasajeNsa: { lote: obtenerValorTexto('pasajeNsaLoteMovimiento'), monto: 0, tarjeta: obtenerValorParseado('pasajeNsaTarjetaMovimiento') },
+            encomiendaNsa: { lote: obtenerValorTexto('encomiendaNsaLoteMovimiento'), monto: 0, tarjeta: obtenerValorParseado('encomiendaNsaTarjetaMovimiento') },
+            apostala: { lote: obtenerValorTexto('apostalaLoteMovimiento'), monto: 0, tarjeta: obtenerValorParseado('apostalaTarjetaMovimiento') }
         },
         otrosServicios: []
     };
@@ -463,7 +475,7 @@ function agregarFilaServicio() {
 
     fila.innerHTML = `
         <td><input type="text" class="nombre-servicio-dinamico" placeholder="Nombre del servicio"></td>
-        <td><input type="text" class="lote-servicio-dinamico" placeholder="Lote/Fecha"></td>
+        <td><input type="text" class="lote-servicio-dinamico" placeholder="Lote/Ref"></td>
         <td><input type="text" inputmode="numeric" class="monto-servicio-dinamico" value="0"></td>
         <td><input type="text" inputmode="numeric" class="tarjeta-servicio-dinamico" value="0"></td>
     `;
@@ -491,8 +503,6 @@ function limpiarFormularioMovimiento() {
     // Resetear valores de campos formateados a '0'
     const camposFormateados = [
         'pagosTarjetaMovimiento', 'ventasCreditoMovimiento', 'pedidosYaMovimiento', 'ventasTransfMovimiento',
-        'apLoteMontoMovimiento', 'aquiPagoMontoMovimiento', 'expressMontoMovimiento', 'wepaMontoMovimiento',
-        'pasajeNsaMovimiento', 'encomiendaNsaMovimiento', 'apostalaMontoMovimiento',
         'apLoteTarjetaMovimiento', 'aquiPagoTarjetaMovimiento', 'expressTarjetaMovimiento', 'wepaTarjetaMovimiento',
         'pasajeNsaTarjetaMovimiento', 'encomiendaNsaTarjetaMovimiento', 'apostalaTarjetaMovimiento'
     ];
@@ -507,9 +517,6 @@ function limpiarFormularioMovimiento() {
     // pero limpiar la descripción y el índice de edición.
     document.getElementById('descripcionMovimiento').value = '';
     document.getElementById('indiceMovimientoEditar').value = '';
-
-    // **CORRECCIÓN:** Reinicializar la fecha al momento actual para el siguiente movimiento.
-    document.getElementById('fechaMovimiento').value = obtenerFechaHoraLocalISO();
 
     // **CORRECCIÓN:** Reinicializar la fecha al momento actual para el siguiente movimiento.
     document.getElementById('fechaMovimiento').value = obtenerFechaHoraLocalISO();
@@ -681,25 +688,18 @@ function iniciarEdicionMovimiento(index) {
 
     // Cargar servicios fijos
     document.getElementById('apLoteCantMovimiento').value = movimiento.servicios.apLote.lote;
-    document.getElementById('apLoteMontoMovimiento').value = movimiento.servicios.apLote.monto;
     document.getElementById('apLoteTarjetaMovimiento').value = movimiento.servicios.apLote.tarjeta;
     document.getElementById('aquiPagoLoteMovimiento').value = movimiento.servicios.aquiPago.lote;
-    document.getElementById('aquiPagoMontoMovimiento').value = movimiento.servicios.aquiPago.monto;
     document.getElementById('aquiPagoTarjetaMovimiento').value = movimiento.servicios.aquiPago.tarjeta;
     document.getElementById('expressCantMovimiento').value = movimiento.servicios.expressLote.lote;
-    document.getElementById('expressMontoMovimiento').value = movimiento.servicios.expressLote.monto;
     document.getElementById('expressTarjetaMovimiento').value = movimiento.servicios.expressLote.tarjeta;
     document.getElementById('wepaFechaMovimiento').value = movimiento.servicios.wepa.lote;
-    document.getElementById('wepaMontoMovimiento').value = movimiento.servicios.wepa.monto;
     document.getElementById('wepaTarjetaMovimiento').value = movimiento.servicios.wepa.tarjeta;
     document.getElementById('pasajeNsaLoteMovimiento').value = movimiento.servicios.pasajeNsa.lote;
-    document.getElementById('pasajeNsaMovimiento').value = movimiento.servicios.pasajeNsa.monto;
     document.getElementById('pasajeNsaTarjetaMovimiento').value = movimiento.servicios.pasajeNsa.tarjeta;
     document.getElementById('encomiendaNsaLoteMovimiento').value = movimiento.servicios.encomiendaNsa.lote;
-    document.getElementById('encomiendaNsaMovimiento').value = movimiento.servicios.encomiendaNsa.monto;
     document.getElementById('encomiendaNsaTarjetaMovimiento').value = movimiento.servicios.encomiendaNsa.tarjeta;
     document.getElementById('apostalaLoteMovimiento').value = movimiento.servicios.apostala.lote;
-    document.getElementById('apostalaMontoMovimiento').value = movimiento.servicios.apostala.monto;
     document.getElementById('apostalaTarjetaMovimiento').value = movimiento.servicios.apostala.tarjeta;
 
     // Limpiar y cargar otros servicios dinámicos
@@ -3302,8 +3302,7 @@ function abrirModalServicioEfectivo() {
     }
 
     // Abrir el modal
-    const nombreServicio = (servicio === 'Otro...') ? document.getElementById('nombreServicioOtro').value : servicio;
-    abrirModal('contenido-servicio-efectivo', `Registrar Billetes para: ${nombreServicio}`);
+    abrirModal('contenido-servicio-efectivo', `Registrar Billetes para: ${servicio}`);
     calcularTotalServicioRecibido(); // Para inicializar el total en G$ 0
 }
 
@@ -3409,7 +3408,7 @@ function guardarServicioEfectivo() {
     const nuevoMovimiento = {
         id: generarId(),
         fecha: obtenerFechaHoraLocalISO(),
-        caja: obtenerCajaActiva(),
+        caja: sessionStorage.getItem('cajaSeleccionada') || (sessionStorage.getItem('userRole') === 'tesoreria' ? 'Caja Tesoreria' : 'Caja 1'),
         descripcion: `Ingreso por servicio: ${servicioSeleccionado}`,
         valorVenta: montoServicio,
         efectivo: desgloseEfectivo,
@@ -3451,10 +3450,6 @@ function limpiarFormularioServicioEfectivo() {
 
     calcularVueltoServicio();
     servicioEfectivoSelect.focus();
-}
-
-function obtenerCajaActiva() {
-    return sessionStorage.getItem('cajaSeleccionada') || (sessionStorage.getItem('userRole') === 'tesoreria' ? 'Caja Tesoreria' : 'Caja 1');
 }
 
 // =================================================================================
